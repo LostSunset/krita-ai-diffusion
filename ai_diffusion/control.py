@@ -97,11 +97,12 @@ class ControlLayer(QObject, ObservableProperties):
             if not value:
                 self._set_values_from_preset()
 
-    def to_api(self, bounds: Bounds | None = None):
+    def to_api(self, bounds: Bounds | None = None, time: int | None = None):
+        assert self.is_supported, "Control layer is not supported"
         layer = self.layer
         if self.mode.is_ip_adapter and not layer.bounds.is_zero:
             bounds = None  # ignore mask bounds, use layer bounds
-        image = layer.get_pixels(bounds)
+        image = layer.get_pixels(bounds, time)
         if self.mode.is_lines or self.mode is ControlMode.stencil:
             image.make_opaque(background=Qt.GlobalColor.white)
         strength = self.strength / self.strength_multiplier
@@ -189,6 +190,11 @@ class ControlLayerList(QObject):
     def remove(self, control: ControlLayer):
         self._layers.remove(control)
         self.removed.emit(control)
+
+    def to_api(self, bounds: Bounds | None = None, time: int | None = None):
+        for layer in (c for c in self._layers if not c.is_supported):
+            log.warning(f"Trying to use control layer {layer.mode.name}: {layer.error_text}")
+        return [c.to_api(bounds, time) for c in self._layers if c.is_supported]
 
     def _update_last_mode(self, mode: ControlMode):
         self._last_mode = mode

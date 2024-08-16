@@ -46,13 +46,13 @@ class ApplyBehavior(Enum):
 
 
 class PerformancePreset(Enum):
-    auto = "Automatic"
-    cpu = "CPU"
-    low = "GPU low (up to 6GB)"
-    medium = "GPU medium (6GB to 12GB)"
-    high = "GPU high (more than 12GB)"
-    cloud = "Cloud"
-    custom = "Custom"
+    auto = _("Automatic")
+    cpu = _("CPU")
+    low = _("GPU low (up to 6GB)")
+    medium = _("GPU medium (6GB to 12GB)")
+    high = _("GPU high (more than 12GB)")
+    cloud = _("Cloud")
+    custom = _("Custom")
 
 
 @dataclass
@@ -175,6 +175,13 @@ class Settings(QObject):
     show_steps: bool
     _show_steps = Setting(
         _("Show Steps"), False, _("Display the number of steps to be evaluated in the weights box.")
+    )
+
+    tag_files: list[str]
+    _tag_files = Setting(
+        _("Tag Auto-Completion"),
+        list(),
+        _("Enable text completion for tags from the selected files"),
     )
 
     apply_behavior: ApplyBehavior

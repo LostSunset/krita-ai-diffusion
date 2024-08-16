@@ -18,6 +18,8 @@ file, typically named using a language code (eg. `en.json` for English).
 If no file for your language exists, you can use the `new_language.json.template` file and
 rename it. It will show up in the plugin's language settings after a restart.
 
+You can check [existing translations here](https://github.com/Acly/krita-ai-diffusion/tree/main/ai_diffusion/language) - this might be more up-to-date than your local installation!
+
 To edit a localization file, open the file in a text editor and provide translations for
 each of the english text strings. For example, to provide a German translation, it could look
 like this:
@@ -39,7 +41,7 @@ like this:
 **Important:** `{placeholders}` must be left unmodified! They will be replaced with actual content during runtime.
 
 To update an existing translation (eg. after the plugin has been updated and new text was added)
-simply search for entries which are `null`. These are valid, but not not translated yet.
+simply search for entries which are `null`. These are valid, but not translated yet.
 
 ## Contributing code
 
@@ -110,9 +112,9 @@ Everything else has tests. Mostly. If effort is reasonable, tests are expected. 
 
 Testing changes to the installer is annoying because of the file sizes involved. There are some things that help. You can preload model files with the following script:
 ```
-python scripts/download_models.py --minimal scripts/docker/downloads
+python scripts/download_models.py --minimal scripts/downloads
 ```
-This will download the minimum required models and store them in `scripts/docker/downloads` (used as default location because that way the docker build script can use them too).
+This will download the minimum required models and store them in `scripts/downloads`.
 
 The following command does some automated testing for installation and upgrade. It starts a local file server which pulls preloaded models, so it's reasonably fast and doesn't download the entire internet.
 ```

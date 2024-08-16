@@ -264,7 +264,7 @@ class ActiveRegionWidget(QFrame):
             self._header_icon.set_region(self._region)
         elif isinstance(self._region, Region):
             theme.set_text_clipped(
-                self._header_label, f"{self._region.name} - Regional text prompt"
+                self._header_label, f"{self._region.name} - " + _("Regional text prompt")
             )
             active_layer = self._root.layers.active
             link_enabled = False
@@ -277,7 +277,7 @@ class ActiveRegionWidget(QFrame):
                 desc = _("Active layer is linked to this region via a group layer")
             elif active_layer.type not in [LayerType.paint, LayerType.group]:
                 icon = "link-disabled"
-                desc = _("Only paint layers and groups and be linked to regions")
+                desc = _("Only paint layers and groups can be linked to regions")
             elif self._root.is_linked(active_layer, RegionLink.direct):
                 icon = "link-disabled"
                 desc = _("Active layer is already linked to another region")
@@ -376,8 +376,8 @@ class ActiveRegionWidget(QFrame):
     _lang_help_translate = _("Use Ctrl+Click to replace the text with a translation immediately.")
 
     def _update_language(self):
-        self._language_button.setVisible(settings.prompt_translation != "")
-        if settings.prompt_translation != "":
+        self._language_button.setVisible(bool(settings.prompt_translation))
+        if settings.prompt_translation:
             enabled = self._root._model.translation_enabled
             lang = settings.prompt_translation if enabled else "en"
             self._language_button.setText(lang.upper())
@@ -391,7 +391,7 @@ class ActiveRegionWidget(QFrame):
             self._language_button.setToolTip(text)
 
     def _layout_language_button(self):
-        if settings.prompt_translation != "":
+        if settings.prompt_translation:
             pos = self.positive.geometry().bottomRight()
             if self.negative.isVisible():
                 pos = self.negative.geometry().bottomRight()

@@ -50,6 +50,7 @@
         "cfg": 3.5
     },
     "Realtime - LCM": {
+        "hidden": true,
         "sampler": "lcm",
         "scheduler": "sgm_uniform",
         "lora": "lcm",
@@ -58,6 +59,7 @@
         "cfg": 1.8
     },
     "Realtime - Lightning": {
+        "hidden": true,
         "sampler": "euler",
         "scheduler": "sgm_uniform",
         "lora": "lightning",
@@ -71,5 +73,12 @@
         "steps": 24,
         "minimum_steps": 4,
         "cfg": 5.0
+    },
+    "Flux - Euler simple": {
+        "sampler": "euler",
+        "scheduler": "simple",
+        "steps": 20,
+        "minimum_steps": 4,
+        "cfg": 1.0
     }
 }

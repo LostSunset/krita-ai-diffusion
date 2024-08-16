@@ -20,7 +20,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtGui import QIcon
 
+from ..localization import translate as _
 from ..settings import Setting, settings
+from ..util import ensure
 from .switch import SwitchWidget
 from .theme import add_header, icon
 
@@ -123,6 +125,60 @@ class SettingWidget(QWidget):
 
     def _notify_value_changed(self):
         self.value_changed.emit()
+
+
+class FileListSetting(SettingWidget):
+    _files: list[str]
+
+    def __init__(self, setting: Setting, files: list[str], parent=None):
+        super().__init__(setting, parent)
+        self._list_items: list[tuple[str, QCheckBox]] = []
+        self.list_widget = QWidget(self)
+        self._list_layout = QHBoxLayout()
+        self._list_layout.setContentsMargins(4, 0, 0, 2)
+        self.list_widget.setLayout(self._list_layout)
+        self._label = QLabel(_("Disabled"), self)
+        self._layout.addWidget(self._label)
+        self._widget = self.list_widget
+
+        self._set_files(files)
+
+    def reset_files(self, files: list[str]):
+        old_value = self.value
+        self._set_files(files)
+        self.value = old_value
+
+    def _set_files(self, files: list[str]):
+        files = sorted(files, key=lambda x: x.lower())
+        self._files = files
+        for _, w in self._list_items:
+            self._list_layout.removeWidget(w)
+        if item := self._list_layout.itemAt(0):
+            self._list_layout.removeItem(item)
+        self._list_items.clear()
+        for file_ in self._files:
+            checkbox = QCheckBox(file_)
+            checkbox.toggled.connect(self._notify_value_changed)
+            self._list_layout.addWidget(checkbox)
+            self._list_items.append((file_, checkbox))
+        self._list_layout.addStretch()
+
+    def _notify_value_changed(self):
+        self._update_label()
+        return super()._notify_value_changed()
+
+    def _update_label(self):
+        self._label.setText(_("Enabled") if len(self.value) > 0 else _("Disabled"))
+
+    @property
+    def value(self):
+        return [file for file, checkbox in self._list_items if checkbox.isChecked()]
+
+    @value.setter
+    def value(self, v):
+        for file, checkbox in self._list_items:
+            checkbox.setChecked(file in v)
+        self._update_label()
 
 
 class SpinBoxSetting(SettingWidget):
@@ -309,7 +365,7 @@ class LineEditSetting(QWidget):
 class SwitchSetting(SettingWidget):
     _text: tuple[str, str]
 
-    def __init__(self, setting: Setting, text=("On", "Off"), parent=None):
+    def __init__(self, setting: Setting, text=(_("On"), _("Off")), parent=None):
         super().__init__(setting, parent)
         self._text = text
 

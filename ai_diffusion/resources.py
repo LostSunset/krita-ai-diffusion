@@ -6,10 +6,10 @@ from typing import NamedTuple, Sequence
 
 # Version identifier for all the resources defined here. This is used as the server version.
 # It usually follows the plugin version, but not all new plugin versions also require a server update.
-version = "1.21.0"
+version = "1.22.0"
 
 comfy_url = "https://github.com/comfyanonymous/ComfyUI"
-comfy_version = "14764aa2e2e2b282c4a4dffbfab4c01d3e46e8a7"
+comfy_version = "413322645e713bdda69836620a97d4c9ca66b230"
 
 
 class CustomNode(NamedTuple):
@@ -39,7 +39,7 @@ required_custom_nodes = [
         "External Tooling Nodes",
         "comfyui-tooling-nodes",
         "https://github.com/Acly/comfyui-tooling-nodes",
-        "f42c0f29b6cc7cf92039d22f84c78422699930c2",
+        "b5fec4a0625e47586b7b28585ce27d4ecdd3b18a",
         ["ETN_LoadImageBase64", "ETN_LoadMaskBase64", "ETN_SendImageWebSocket", "ETN_Translate"],
     ),
     CustomNode(
@@ -56,6 +56,7 @@ class SDVersion(Enum):
     sd15 = "SD 1.5"
     sdxl = "SD XL"
     sd3 = "SD 3"
+    flux = "Flux"
 
     auto = "Automatic"
     all = "All"
@@ -68,6 +69,8 @@ class SDVersion(Enum):
             return SDVersion.sdxl
         if string == "sd3":
             return SDVersion.sd3
+        if string == "flux" or string == "flux-schnell":
+            return SDVersion.flux
         return None
 
     @staticmethod
@@ -102,11 +105,15 @@ class SDVersion(Enum):
 
     @staticmethod
     def list():
-        return [SDVersion.sd15, SDVersion.sdxl, SDVersion.sd3]
+        return [SDVersion.sd15, SDVersion.sdxl, SDVersion.sd3, SDVersion.flux]
+
+    @staticmethod
+    def list_strings():
+        return ["sd15", "sdxl", "sd3", "flux", "flux-schnell"]
 
 
 class ResourceKind(Enum):
-    checkpoint = "Stable Diffusion Checkpoint"
+    checkpoint = "Diffusion Checkpoint"
     clip = "CLIP model"
     controlnet = "ControlNet model"
     clip_vision = "CLIP Vision model"
@@ -254,6 +261,9 @@ class ModelResource(NamedTuple):
     @property
     def sd_version(self):
         return self.id.version
+
+    def __hash__(self):
+        return hash(self.id)
 
 
 required_models = [
@@ -424,6 +434,15 @@ default_checkpoints = [
             Path(
                 "models/checkpoints/zavychromaxl_v80.safetensors"
             ): "https://huggingface.co/misri/zavychromaxl_v80/resolve/main/zavychromaxl_v80.safetensors"
+        },
+    ),
+    ModelResource(
+        "Flux [schnell]",
+        ResourceId(ResourceKind.checkpoint, SDVersion.flux, "flux-schnell"),
+        {
+            Path(
+                "models/checkpoints/flux1-schnell-fp8.safetensors"
+            ): "https://huggingface.co/Comfy-Org/flux1-schnell/resolve/main/flux1-schnell-fp8.safetensors"
         },
     ),
 ]
