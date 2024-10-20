@@ -6,10 +6,10 @@ from typing import NamedTuple, Sequence
 
 # Version identifier for all the resources defined here. This is used as the server version.
 # It usually follows the plugin version, but not all new plugin versions also require a server update.
-version = "1.25.0"
+version = "1.26.0"
 
 comfy_url = "https://github.com/comfyanonymous/ComfyUI"
-comfy_version = "dc96a1ae19b1d714a791f1fcb21578389955bbfd"
+comfy_version = "1b8089528502a881d0ed2918b2abd54441743dd0"
 
 
 class CustomNode(NamedTuple):
@@ -39,7 +39,7 @@ required_custom_nodes = [
         "External Tooling Nodes",
         "comfyui-tooling-nodes",
         "https://github.com/Acly/comfyui-tooling-nodes",
-        "1a24975f99b95fa9a17a917de05fa248d8dc9569",
+        "ef5ccfa98f035fd1d9fd00a21ac4ab75a5f73061",
         ["ETN_LoadImageBase64", "ETN_LoadMaskBase64", "ETN_SendImageWebSocket", "ETN_Translate"],
     ),
     CustomNode(
@@ -867,6 +867,7 @@ search_paths: dict[str, list[str]] = {
     resource_id(ResourceKind.controlnet, Arch.sdxl, ControlMode.segmentation): ["sdxl_segmentation_ade20k_controlnet"],
     resource_id(ResourceKind.controlnet, Arch.sd15, ControlMode.blur): ["control_v11f1e_sd15_tile", "control_lora_rank128_v11f1e_sd15_tile"],
     resource_id(ResourceKind.controlnet, Arch.sdxl, ControlMode.blur): ["xinsirtile", "tile-sdxl", "ttplanetsdxlcontrolnet", "ttplanet_sdxl_controlnet_tile_realistic", "ttplanet_controlnet_tile_realistic"],
+    resource_id(ResourceKind.controlnet, Arch.flux, ControlMode.blur): ["flux.1-dev-controlnet-upscale"],
     resource_id(ResourceKind.controlnet, Arch.sd15, ControlMode.stencil): ["control_v1p_sd15_qrcode_monster"],
     resource_id(ResourceKind.controlnet, Arch.sdxl, ControlMode.stencil): ["sdxl_qrcode_monster"],
     resource_id(ResourceKind.controlnet, Arch.sd15, ControlMode.hands): ["control_sd15_inpaint_depth_hand"],
