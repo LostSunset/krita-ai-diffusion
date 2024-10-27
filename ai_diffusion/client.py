@@ -26,6 +26,22 @@ class ClientEvent(Enum):
     queued = 6
     upload = 7
     published = 8
+    output = 9
+
+
+class TextOutput(NamedTuple):
+    key: str
+    name: str
+    text: str
+    mime: str
+
+
+class SharedWorkflow(NamedTuple):
+    publisher: str
+    workflow: dict
+
+
+ClientOutput = dict | SharedWorkflow | TextOutput
 
 
 class ClientMessage(NamedTuple):
@@ -33,7 +49,7 @@ class ClientMessage(NamedTuple):
     job_id: str = ""
     progress: float = 0
     images: ImageCollection | None = None
-    result: dict | SharedWorkflow | None = None
+    result: ClientOutput | None = None
     error: str | None = None
 
 
@@ -67,11 +83,6 @@ class DeviceInfo(NamedTuple):
         except Exception as e:
             log.error(f"Could not parse device info {data}: {str(e)}")
             return DeviceInfo("cpu", "unknown", 0)
-
-
-class SharedWorkflow(NamedTuple):
-    publisher: str
-    workflow: dict
 
 
 class CheckpointInfo(NamedTuple):
@@ -154,7 +165,7 @@ class ModelDict:
     def find(self, key: ControlMode | UpscalerName | str, allow_universal=False) -> str | None:
         if key in [ControlMode.style, ControlMode.composition]:
             key = ControlMode.reference  # Same model with different weight types
-        result = self._models.resources.get(resource_id(self.kind, self.arch, key))
+        result = self._models.find(ResourceId(self.kind, self.arch, key))
         if result is None and allow_universal and isinstance(key, ControlMode):
             result = self.find(ControlMode.universal)
         return result
