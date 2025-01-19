@@ -196,7 +196,7 @@ class Server:
         await _extract_archive("ComfyUI", archive_path, comfy_dir.parent, cb)
         temp_comfy_dir = comfy_dir.parent / f"ComfyUI-{resources.comfy_version}"
 
-        torch_args = ["torch~=2.4.1", "torchvision~=0.19.1", "torchaudio~=2.4.1"]
+        torch_args = ["torch~=2.5.1", "torchvision~=0.20.1", "torchaudio~=2.5.1"]
         if self.backend is ServerBackend.cpu:
             torch_args += ["--index-url", "https://download.pytorch.org/whl/cpu"]
         elif self.backend is ServerBackend.cuda:
@@ -679,7 +679,7 @@ def parse_common_errors(output: str, return_code: int | None = None):
         return (
             _("Could not bind on address")
             + f" {message_part}. "
-            + "<a href='https://github.com/Acly/krita-ai-diffusion/wiki/Common-Issues#error-during-server-startup-could-not-bind-on-address-only-one-usage-of-each-socket-address-is-normally-permitted'>More information...</a>"
+            + "<a href='https://docs.interstice.cloud/common-issues#bind-address'>More information...</a>"
         )
 
     nvidia_driver = "Found no NVIDIA driver on your system"

@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.0.1-base-ubuntu22.04 AS base
+FROM nvidia/cuda:12.4.1-base-ubuntu22.04 AS base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive \

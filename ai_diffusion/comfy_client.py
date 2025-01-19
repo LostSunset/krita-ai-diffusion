@@ -169,6 +169,7 @@ class ComfyClient(Client):
         # Check supported SD versions and make sure there is at least one
         missing = {ver: client._check_workload(ver) for ver in Arch.list()}
         client._supported_archs = [ver for ver, miss in missing.items() if len(miss) == 0]
+        log.info("Supported workloads: " + ", ".join(ver.value for ver in client._supported_archs))
         if len(client._supported_archs) == 0:
             raise missing[Arch.sd15][0]
 
@@ -401,7 +402,7 @@ class ComfyClient(Client):
             parsed = (
                 (
                     filename,
-                    Arch.from_string(info["base_model"]),
+                    Arch.from_string(info["base_model"], info.get("type", "eps")),
                     info.get("is_inpaint", False),
                     info.get("is_refiner", False),
                 )
@@ -542,11 +543,9 @@ class ComfyClient(Client):
             if models.find(id) is None:
                 missing.append(MissingResource(id.kind, [id]))
         has_checkpoint = any(cp.arch is sdver for cp in models.checkpoints.values())
-        if not has_checkpoint:
+        if not has_checkpoint and sdver not in [Arch.illu, Arch.illu_v]:
             missing.append(MissingResource(ResourceKind.checkpoint, [sdver.value]))
-        if len(missing) == 0:
-            log.info(f"{sdver.value}: supported")
-        else:
+        if len(missing) > 0:
             log.info(f"{sdver.value}: missing {len(missing)} models")
         return missing
 
@@ -596,7 +595,7 @@ def _find_model(
 
     matches = (m for p in search_paths for m in model_list if match(m, p))
     # if there are multiple matches, prefer the one with "krita" in the path
-    prio = sorted(matches, key=lambda m: 0 if "krita" in m else 1)
+    prio = sorted(matches, key=lambda m: 0 if "krita" in m else len(m))
     found = next(iter(prio), None)
     model_id = identifier.name if isinstance(identifier, Enum) else identifier
     model_name = f"{kind.value} {model_id}"
@@ -651,9 +650,11 @@ def _find_clip_vision_model(model_list: Sequence[str]):
     if model is None:
         raise MissingResource(ResourceKind.clip_vision, resources.search_path(*clip_vision_sd))
     clip_vision_flux = ResourceId(ResourceKind.clip_vision, Arch.flux, "redux")
+    clip_vision_illu = ResourceId(ResourceKind.clip_vision, Arch.illu, "ip_adapter")
     return {
         clip_vision_sd.string: model,
         clip_vision_flux.string: find_model(model_list, clip_vision_flux),
+        clip_vision_illu.string: find_model(model_list, clip_vision_illu),
     }
 
 
