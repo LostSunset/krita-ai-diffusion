@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QLineEdit,
 )
-from PyQt5.QtCore import Qt, QUrl, QAbstractItemModel, pyqtSignal
+from PyQt5.QtCore import Qt, QUrl, pyqtSignal
 from PyQt5.QtGui import QDesktopServices, QPalette, QColor
 from krita import Krita
 
@@ -429,7 +429,6 @@ def _show_file_too_large_warning(max_size: int, parent=None):
 
 
 class SamplerWidget(QWidget):
-
     prefix: str
 
     value_changed = pyqtSignal()

@@ -167,6 +167,9 @@ class Settings(QObject):
         _("Prompt Line Count"), 2, _("Size of the text editor for image descriptions")
     )
 
+    prompt_line_count_live: int
+    _prompt_line_count_live = Setting("Prompt Line Count (Live)", 2)
+
     show_negative_prompt: bool
     _show_negative_prompt = Setting(
         _("Negative Prompt"), False, _("Show text editor to describe things to avoid")
@@ -305,12 +308,13 @@ class Settings(QObject):
         return object.__getattribute__(self, name)
 
     def __setattr__(self, name: str, value):
-        if name in self._values and self._values[name] != value:
-            self._values[name] = value
-            if name != "document_defaults":
-                self.changed.emit(name, value)
-            if name == "performance_preset":
-                self.apply_performance_preset(value)
+        if name in self._values:
+            if self._values[name] != value:
+                self._values[name] = value
+                if name != "document_defaults":
+                    self.changed.emit(name, value)
+                if name == "performance_preset":
+                    self.apply_performance_preset(value)
         else:
             object.__setattr__(self, name, value)
 

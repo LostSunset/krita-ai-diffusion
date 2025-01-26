@@ -161,13 +161,13 @@ class Arch(Enum):
 
 class ResourceKind(Enum):
     checkpoint = "Diffusion checkpoint"
-    text_encoder = "Text Encoder model"
-    vae = "Image Encoder (VAE) model"
-    controlnet = "ControlNet model"
-    clip_vision = "CLIP Vision model"
-    ip_adapter = "IP-Adapter model"
-    lora = "LoRA model"
-    upscaler = "Upscale model"
+    text_encoder = "Text Encoder"
+    vae = "Image Encoder (VAE)"
+    controlnet = "ControlNet"
+    clip_vision = "CLIP Vision"
+    ip_adapter = "IP-Adapter"
+    lora = "LoRA"
+    upscaler = "Upscale"
     inpaint = "Inpaint model"
     embedding = "Textual Embedding"
     preprocessor = "Preprocessor"
@@ -217,7 +217,7 @@ class ControlMode(Enum):
 
     @property
     def has_preprocessor(self):
-        return self.is_control_net and not self in [
+        return self.is_control_net and self not in [
             ControlMode.inpaint,
             ControlMode.blur,
             ControlMode.stencil,
@@ -256,6 +256,12 @@ class ControlMode(Enum):
         return control.control_mode_text[self]
 
 
+def resource_id(kind: ResourceKind, arch: Arch, identifier: ControlMode | UpscalerName | str):
+    if isinstance(identifier, Enum):
+        identifier = identifier.name
+    return f"{kind.name}-{identifier}-{arch.name}"
+
+
 class ResourceId(NamedTuple):
     kind: ResourceKind
     arch: Arch
@@ -288,29 +294,54 @@ class ModelRequirements(Enum):
     insightface = 1
 
 
+class ModelFile(NamedTuple):
+    path: Path
+    url: str
+    id: ResourceId
+
+    @property
+    def name(self):
+        return self.path.name
+
+    @staticmethod
+    def parse(data: dict[str, Any], parent_id: ResourceId):
+        id = ResourceId.parse(data.get("id", parent_id.string))
+        return ModelFile(Path(data["path"]), data["url"], id)
+
+    def as_dict(self, with_id=True):
+        result = {
+            "id": self.id.string,
+            "path": str(self.path.as_posix()),
+            "url": self.url,
+        }
+        if not with_id:
+            del result["id"]
+        return result
+
+
 class ModelResource(NamedTuple):
     name: str
     id: ResourceId
-    files: dict[Path, str]
+    files: list[ModelFile]
     alternatives: list[Path] | None = None  # for backwards compatibility
     requirements: ModelRequirements = ModelRequirements.none
 
     @property
     def filename(self):
         assert len(self.files) == 1
-        return next(iter(self.files)).name
+        return self.files[0].name
 
     @property
     def folder(self):
-        return next(iter(self.files)).parent
+        return self.files[0].path.parent
 
     @property
     def url(self):
         assert len(self.files) == 1
-        return next(iter(self.files.values()))
+        return self.files[0].url
 
     def exists_in(self, path: Path):
-        exact = all((path / filepath).exists() for filepath in self.files.keys())
+        exact = all((path / file.path).exists() for file in self.files)
         alt = self.alternatives is not None and any((path / f).exists() for f in self.alternatives)
         return exact or alt
 
@@ -329,7 +360,7 @@ class ModelResource(NamedTuple):
         result = {
             "id": self.id.string,
             "name": self.name,
-            "files": [{"path": str(k.as_posix()), "url": v} for k, v in self.files.items()],
+            "files": [f.as_dict(len(self.files) > 1) for f in self.files],
         }
         if self.alternatives:
             result["alternatives"] = [str(p.as_posix()) for p in self.alternatives]
@@ -340,7 +371,7 @@ class ModelResource(NamedTuple):
     @staticmethod
     def from_dict(data: dict[str, Any]):
         id = ResourceId.parse(data["id"])
-        files = {Path(f["path"]): f["url"] for f in data["files"]}
+        files = [ModelFile.parse(f, id) for f in data["files"]]
         alternatives = [Path(p) for p in data.get("alternatives", [])]
         requirements = (
             ModelRequirements[data["requirements"]]
@@ -364,37 +395,6 @@ optional_models = ModelResource.from_list(_models_dict["optional"])
 prefetch_models = ModelResource.from_list(_models_dict["prefetch"])
 deprecated_models = ModelResource.from_list(_models_dict["deprecated"])
 
-
-class MissingResource(Exception):
-    kind: ResourceKind
-    names: Sequence[str] | Sequence[ResourceId] | Sequence[CustomNode] | None
-
-    def __init__(
-        self,
-        kind: ResourceKind,
-        names: Sequence[str] | Sequence[ResourceId] | Sequence[CustomNode] | None = None,
-    ):
-        self.kind = kind
-        self.names = names
-
-    def __str__(self):
-        names = self.names or []
-        names = [getattr(n, "name", n) for n in names]
-        return f"Missing {self.kind.value}: {', '.join(str(n) for n in names)}"
-
-    @property
-    def search_path_string(self):
-        if names := self.names:
-            paths = (
-                search_path(n.kind, n.arch, n.identifier)
-                for n in names
-                if isinstance(n, ResourceId)
-            )
-            items = (", ".join(sp) for sp in paths if sp)
-            return "Checking for files with a (partial) match:\n" + "\n".join(items)
-        return ""
-
-
 all_resources = (
     [n.name for n in required_custom_nodes]
     + [m.name for m in required_models]
@@ -417,14 +417,10 @@ def all_models(include_deprecated=False):
     return result
 
 
-def resource_id(kind: ResourceKind, arch: Arch, identifier: ControlMode | UpscalerName | str):
-    if isinstance(identifier, Enum):
-        identifier = identifier.name
-    return f"{kind.name}-{identifier}-{arch.name}"
-
-
 def find_resource(id: ResourceId, include_deprecated=False):
-    return next((m for m in all_models(include_deprecated) if m.id == id), None)
+    return next(
+        (m for m in all_models(include_deprecated) if any(f.id == id for f in m.files)), None
+    )
 
 
 def search_path(kind: ResourceKind, arch: Arch, identifier: ControlMode | UpscalerName | str):
@@ -509,23 +505,21 @@ search_paths: dict[str, list[str]] = {
 }
 # fmt: on
 
-required_resource_ids = set(
-    [
-        ResourceId(ResourceKind.text_encoder, Arch.sd3, "clip_l"),
-        ResourceId(ResourceKind.text_encoder, Arch.sd3, "clip_g"),
-        ResourceId(ResourceKind.controlnet, Arch.sd15, ControlMode.inpaint),
-        ResourceId(ResourceKind.controlnet, Arch.sd15, ControlMode.blur),
-        ResourceId(ResourceKind.ip_adapter, Arch.sd15, ControlMode.reference),
-        ResourceId(ResourceKind.ip_adapter, Arch.sdxl, ControlMode.reference),
-        ResourceId(ResourceKind.clip_vision, Arch.all, "ip_adapter"),
-        ResourceId(ResourceKind.lora, Arch.sd15, "hyper"),
-        ResourceId(ResourceKind.lora, Arch.sdxl, "hyper"),
-        ResourceId(ResourceKind.upscaler, Arch.all, UpscalerName.default),
-        ResourceId(ResourceKind.upscaler, Arch.all, UpscalerName.fast_2x),
-        ResourceId(ResourceKind.upscaler, Arch.all, UpscalerName.fast_3x),
-        ResourceId(ResourceKind.upscaler, Arch.all, UpscalerName.fast_4x),
-        ResourceId(ResourceKind.inpaint, Arch.sdxl, "fooocus_head"),
-        ResourceId(ResourceKind.inpaint, Arch.sdxl, "fooocus_patch"),
-        ResourceId(ResourceKind.inpaint, Arch.all, "default"),
-    ]
-)
+required_resource_ids = set([
+    ResourceId(ResourceKind.text_encoder, Arch.sd3, "clip_l"),
+    ResourceId(ResourceKind.text_encoder, Arch.sd3, "clip_g"),
+    ResourceId(ResourceKind.controlnet, Arch.sd15, ControlMode.inpaint),
+    ResourceId(ResourceKind.controlnet, Arch.sd15, ControlMode.blur),
+    ResourceId(ResourceKind.ip_adapter, Arch.sd15, ControlMode.reference),
+    ResourceId(ResourceKind.ip_adapter, Arch.sdxl, ControlMode.reference),
+    ResourceId(ResourceKind.clip_vision, Arch.all, "ip_adapter"),
+    ResourceId(ResourceKind.lora, Arch.sd15, "hyper"),
+    ResourceId(ResourceKind.lora, Arch.sdxl, "hyper"),
+    ResourceId(ResourceKind.upscaler, Arch.all, UpscalerName.default),
+    ResourceId(ResourceKind.upscaler, Arch.all, UpscalerName.fast_2x),
+    ResourceId(ResourceKind.upscaler, Arch.all, UpscalerName.fast_3x),
+    ResourceId(ResourceKind.upscaler, Arch.all, UpscalerName.fast_4x),
+    ResourceId(ResourceKind.inpaint, Arch.sdxl, "fooocus_head"),
+    ResourceId(ResourceKind.inpaint, Arch.sdxl, "fooocus_patch"),
+    ResourceId(ResourceKind.inpaint, Arch.all, "default"),
+])

@@ -136,8 +136,10 @@ class ComfyWorkflow:
     def add(self, class_type: str, output_count: Literal[4], **inputs) -> Output4: ...
 
     def add(self, class_type: str, output_count: int, **inputs):
+        def normalize(x):
+            return [str(x.node), x.output] if isinstance(x, Output) else x
+
         inputs = self.add_default_values(class_type, inputs)
-        normalize = lambda x: [str(x.node), x.output] if isinstance(x, Output) else x
         self.node_count += 1
         self.root[str(self.node_count)] = {
             "class_type": class_type,
@@ -464,7 +466,9 @@ class ComfyWorkflow:
         )
 
     def load_insight_face(self):
-        return self.add_cached("IPAdapterInsightFaceLoader", 1, provider="CPU")
+        return self.add_cached(
+            "IPAdapterInsightFaceLoader", 1, provider="CPU", model_name="buffalo_l"
+        )
 
     def load_inpaint_model(self, model_name: str):
         return self.add_cached("INPAINT_LoadInpaintModel", 1, model_name=model_name)
@@ -646,7 +650,7 @@ class ComfyWorkflow:
         )
 
     def combine_ip_adapter_embeds(self, embeds: list[Output]):
-        e = {f"embed{i+1}": embed for i, embed in enumerate(embeds)}
+        e = {f"embed{i + 1}": embed for i, embed in enumerate(embeds)}
         return self.add("IPAdapterCombineEmbeds", 1, method="concat", **e)
 
     def apply_ip_adapter(
@@ -697,9 +701,11 @@ class ComfyWorkflow:
             weight=weight,
             weight_faceidv2=weight * 2,
             weight_type="linear",
+            combine_embeds="concat",
             start_at=range[0],
             end_at=range[1],
             attn_mask=mask,
+            embeds_scaling="V only",
         )
 
     def apply_self_attention_guidance(self, model: Output):
@@ -1065,7 +1071,7 @@ def _convert_ui_workflow(w: dict, node_inputs: dict):
 
             for connection in node["inputs"]:
                 if connection["name"] == field_name and connection["link"] is not None:
-                    link = next(l for l in links if l[0] == connection["link"])
+                    link = next(x for x in links if x[0] == connection["link"])
                     prim = primitives.get(link[1])
                     if prim is not None:
                         inputs[field_name] = prim
